@@ -44,7 +44,10 @@ interface Package {
   trainerId: string;
   plans: PackagePlan[];
   isFreeTrial?: boolean;
+  startDate?: string;
+  endDate?: string;
 }
+
 
 const sendNotification = async (userId: string, trainerId: string, type: string, title: string, content: string) => {
   const notificationRef = ref(database, `customerNotifications/${userId}`);
@@ -115,6 +118,19 @@ export default function AddPackage() {
     date: '',
   });
   const [loading, setLoading] = useState(true);
+
+  const today = new Date();
+  const sevenDaysLater = new Date();
+  sevenDaysLater.setDate(today.getDate() + 7);
+
+  const formatDate = (date: Date) => {
+    return date.toISOString().split('T')[0]; // format to 'YYYY-MM-DD'
+  };
+
+  const [startDate, setStartDate] = useState<string>(formatDate(today));
+  const [endDate, setEndDate] = useState<string>(formatDate(sevenDaysLater));
+
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -235,6 +251,7 @@ export default function AddPackage() {
 
     try {
       const packageRef = ref(database, `packages`);
+      
       const newPackage = {
         customerId: selectedCustomer,
         customerName: customers.find((customer) => customer.id === selectedCustomer)?.displayName || '',
@@ -244,8 +261,11 @@ export default function AddPackage() {
         weight: parseInt(weight as string, 10),
         trainerId: trainerId,
         plans,
-        isFreeTrial, // Add the free trial status to the package
+        isFreeTrial,
+        startDate,
+        endDate
       };
+      
 
       const packageSnapshot = await push(packageRef, newPackage);
       const packageId = packageSnapshot.key;
@@ -357,14 +377,16 @@ export default function AddPackage() {
                   ))}
                 </select>
               </div>
-
+              
+              <label className="block mb-2 font-medium">Package Title:</label>
               {/* Package Title */}
               <Input
                 placeholder="Package Title"
                 value={packageTitle}
                 onChange={(e) => setPackageTitle(e.target.value)}
               />
-
+              
+              <label className="block mb-2 font-medium">Customer Goal:</label>
               {/* Customer Goal */}
               <Input
                 placeholder="Customer Goal"
@@ -372,7 +394,8 @@ export default function AddPackage() {
                 onChange={(e) => setCustomerGoal(e.target.value)}
                 disabled
               />
-
+              
+              <label className="block mb-2 font-medium">Height:</label>
               {/* Height */}
               <Input
                 type="number"
@@ -381,7 +404,8 @@ export default function AddPackage() {
                 onChange={(e) => setHeight(e.target.value)}
                 disabled
               />
-
+              
+              <label className="block mb-2 font-medium">Weight:</label>
               {/* Weight */}
               <Input
                 type="number"
@@ -390,6 +414,26 @@ export default function AddPackage() {
                 onChange={(e) => setWeight(e.target.value)}
                 disabled
               />
+
+              {/* Start Date */}
+        
+              <label className="block mb-2 font-medium">Start Date:</label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                placeholder="Start Date"
+                    />
+              
+              <label className="block mb-2 font-medium">End Date:</label>
+              {/* End Date */}
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                placeholder="End Date"
+              />
+
 
               {/* Trainer Selection */}
               <div>
@@ -458,6 +502,8 @@ export default function AddPackage() {
                       <p><span className="font-medium">Goal:</span> {pkg.customerGoal}</p>
                       <p><span className="font-medium">Height:</span> {pkg.height} cm</p>
                       <p><span className="font-medium">Weight:</span> {pkg.weight} kg</p>
+                      <p><span className="font-medium">Start Date:</span> {pkg.startDate || 'N/A'}</p>
+                      <p><span className="font-medium">End Date:</span> {pkg.endDate || 'N/A'}</p>
                     </div>
                   </div>
                 ))}
