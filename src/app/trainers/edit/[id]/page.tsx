@@ -29,6 +29,12 @@ const specializationOptions = [
   { value: 'Cardio Specialist', label: 'Cardio Specialist' },
 ];
 
+const trainerTypeOptions = [
+  { value: '', label: 'Select trainer type' },
+  { value: 'Onsite', label: 'Onsite' },
+  { value: 'Mobile', label: 'Mobile' },
+];
+
 export default function TrainerForm({ params }: TrainerFormProps) {
   const router = useRouter();
  
@@ -37,6 +43,7 @@ export default function TrainerForm({ params }: TrainerFormProps) {
     displayName: '',
     email: '',
     specialization: '',
+    type: '', // Added trainer type field
     age: '',
     mobile: '',
     role: 'trainer'
@@ -48,17 +55,21 @@ export default function TrainerForm({ params }: TrainerFormProps) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if ( params.id) {
+    if (params.id) {
       // Fetch trainer data if in edit mode
       fetchData(`users/${params.id}`, (data?: any) => {
         if (data) {
-          setFormData(data);
+          setFormData({
+            ...data,
+            // If the trainer doesn't have a type field yet, initialize it to empty string
+            type: data.type || '',
+          });
         } else {
           setError('Trainer not found');
         }
       });
     }
-  }, [ params.id]);
+  }, [params.id]);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -72,11 +83,22 @@ export default function TrainerForm({ params }: TrainerFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.specialization) {
+      setError('Please select a specialization');
+      return;
+    }
+
+    if (!formData.type) {
+      setError('Please select a trainer type');
+      return;
+    }
+    
     setLoading(true);
     setError('');
 
     try {
-      if ( params.id) {
+      if (params.id) {
         await updateData(`users/${params.id}`, formData);
       } else {
         await addData('users', formData);
@@ -133,8 +155,8 @@ export default function TrainerForm({ params }: TrainerFormProps) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
                 minLength={6}
+                placeholder="Leave blank to keep current password"
               />
             </div>
 
@@ -146,6 +168,17 @@ export default function TrainerForm({ params }: TrainerFormProps) {
               onChange={handleChange}
               required
               error={error && !formData.specialization ? 'Please select a specialization' : ''}
+            />
+
+            {/* New Trainer Type Select Field */}
+            <Select
+              label="Trainer Type"
+              name="type"
+              options={trainerTypeOptions}
+              value={formData.type}
+              onChange={handleChange}
+              required
+              error={error && !formData.type ? 'Please select a trainer type' : ''}
             />
 
             <div className="space-y-2">

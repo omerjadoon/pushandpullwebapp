@@ -410,6 +410,8 @@ export default function AddPackage() {
 
               {/* Free Trial Checkbox */}
                 <div className="flex items-center space-x-2">
+                
+
                 <Checkbox 
                   id="freetrial" 
                   checked={isFreeTrial}

@@ -21,6 +21,7 @@ interface TrainerFormData {
   displayName: string;
   email: string;
   specialization: string;
+  type: string;  // Added trainer type field
   age: string;
   mobile: string;
   role: string;
@@ -35,6 +36,12 @@ const specializationOptions = [
   { value: 'Cardio Specialist', label: 'Cardio Specialist' },
 ];
 
+const trainerTypeOptions = [
+  { value: '', label: 'Select trainer type' },
+  { value: 'Onsite', label: 'Onsite' },
+  { value: 'Mobile', label: 'Mobile' },
+];
+
 export default function AddTrainer() {
   const router = useRouter();
   
@@ -42,6 +49,7 @@ export default function AddTrainer() {
     displayName: '',
     email: '',
     specialization: '',
+    type: '',  // Initialize the new type field
     age: '',
     mobile: '',
     role: 'trainer'
@@ -67,6 +75,11 @@ export default function AddTrainer() {
     
     if (!formData.specialization) {
       setError('Please select a specialization');
+      return;
+    }
+
+    if (!formData.type) {
+      setError('Please select a trainer type');
       return;
     }
 
@@ -177,6 +190,17 @@ export default function AddTrainer() {
               onChange={handleChange}
               required
               error={error && !formData.specialization ? 'Please select a specialization' : ''}
+            />
+
+            {/* New Trainer Type Select Field */}
+            <Select
+              label="Trainer Type"
+              name="type"
+              options={trainerTypeOptions}
+              value={formData.type}
+              onChange={handleChange}
+              required
+              error={error && !formData.type ? 'Please select a trainer type' : ''}
             />
 
             <div className="space-y-2">
