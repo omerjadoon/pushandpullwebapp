@@ -1,310 +1,317 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ref, get, push, update } from 'firebase/database';
+import { useParams, useRouter } from 'next/navigation';
+import { ref, get } from 'firebase/database';
 import { database } from '@/config/firebaseConfig';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import DefaultLayout from "@/components/Layouts/DefaultLaout";
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
+import { ArrowLeft, Calendar, CheckCircle, XCircle, Smartphone, Monitor, Tag, FileText } from 'lucide-react';
 
-interface RequestDetailsProps {
-  params: {
-    id: string;
-  };
-}
-
-interface Customer {
-  displayName: string;
-  email: string;
-  mobile: string;
-  preferredSlot: string;
-  trainerPreferences: {
-    first: string;
-    second: string;
-    third: string;
-  };
-}
-
-interface Suggestion {
-  message: string;
-  slot: string;
-  trainer: string;
-}
-
-interface AcceptedSuggestion {
+interface Subscription {
   id: string;
-  message: string;
-  slot: string;
-  suggestionId: string;
-  trainer: string;
+  name: string;
+  description: string;
+  type: string;
+  validForOnsite: boolean;
+  validForMobile: boolean;
+  active: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  price?: number;
+  duration?: string;
+  features?: string[];
 }
 
-interface Trainer {
-  id: string;
-  displayName: string;
-}
-
-export default function RequestDetails({ params }: RequestDetailsProps) {
-  const { id } = params;
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [acceptedSuggestion, setAcceptedSuggestion] = useState<AcceptedSuggestion | null>(null);
-  const [moreSuggestionsRequest, setMoreSuggestionsRequest] = useState<string | null>(null);
-  const [newSuggestion, setNewSuggestion] = useState<Suggestion>({
-    message: '',
-    slot: '',
-    trainer: '',
-  });
-  const [trainers, setTrainers] = useState<Trainer[]>([]);
+export default function SubscriptionDetails() {
+  const params = useParams();
+  const router = useRouter();
+  const subscriptionId = params.id as string;
+  
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchRequestDetails = async () => {
+    const fetchSubscription = async () => {
+      if (!subscriptionId) {
+        setError('Subscription ID is required');
+        setLoading(false);
+        return;
+      }
+
       try {
-        const requestRef = ref(database, `requests/${id}`);
-        const requestSnapshot = await get(requestRef);
-        const requestData = requestSnapshot.val();
-
-        if (!requestData) {
-          setLoading(false);
-          return;
+        const subscriptionRef = ref(database, `subscriptions/${subscriptionId}`);
+        const subscriptionSnapshot = await get(subscriptionRef);
+        
+        if (subscriptionSnapshot.exists()) {
+          const subscriptionData = subscriptionSnapshot.val();
+          setSubscription({
+            id: subscriptionId,
+            ...subscriptionData,
+          });
+        } else {
+          setError('Subscription not found');
         }
-
-        const { customer_id } = requestData;
-
-        // Fetch customer details
-        const customerRef = ref(database, `users/${customer_id}`);
-        const customerSnapshot = await get(customerRef);
-        const customerData = customerSnapshot.val();
-
-        // Fetch suggestions for the customer
-        const suggestionsRef = ref(database, `suggestions/users/${customer_id}`);
-        const suggestionsSnapshot = await get(suggestionsRef);
-        const userSuggestions = suggestionsSnapshot.val()
-          ? Object.values(suggestionsSnapshot.val())
-          : [];
-
-        // Fetch accepted suggestion for the customer
-        const acceptedSuggestionRef = ref(database, `acceptedSuggestions/${customer_id}`);
-        const acceptedSuggestionSnapshot = await get(acceptedSuggestionRef);
-        const userAcceptedSuggestion = acceptedSuggestionSnapshot.val();
-
-        // Fetch more suggestions request
-        const moreSuggestionsRef = ref(database, `requestMoreSuggestions/${customer_id}`);
-        const moreSuggestionsSnapshot = await get(moreSuggestionsRef);
-        const moreSuggestionsData = moreSuggestionsSnapshot.val();
-
-        // Fetch all trainers
-        const usersRef = ref(database, `users`);
-        const usersSnapshot = await get(usersRef);
-        const usersData = usersSnapshot.val();
-        const trainerList = Object.entries(usersData || {})
-          .filter(([, user]: [string, any]) => user.role === 'trainer')
-          .map(([id, user]: [string, any]) => ({
-            id,
-            displayName: user.displayName,
-          }));
-
-        setCustomer(customerData);
-        setSuggestions(userSuggestions as Suggestion[]);
-        setAcceptedSuggestion(userAcceptedSuggestion as AcceptedSuggestion);
-        setMoreSuggestionsRequest(moreSuggestionsData?.status || null);
-        setTrainers(trainerList as Trainer[]);
       } catch (error) {
-        console.error('Error fetching request details:', error);
+        console.error('Error fetching subscription:', error);
+        setError('Failed to load subscription details');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRequestDetails();
-  }, [id]);
-
-  const handleAddSuggestion = async () => {
-    if (!customer || !newSuggestion.message || !newSuggestion.slot || !newSuggestion.trainer) {
-      alert('Please fill in all the fields before adding a suggestion.');
-      return;
-    }
-
-    try {
-      const suggestionsRef = ref(database, `suggestions/users/${id}`);
-      await push(suggestionsRef, newSuggestion);
-      setSuggestions([...suggestions, newSuggestion]);
-      setNewSuggestion({ message: '', slot: '', trainer: '' });
-      alert('Suggestion added successfully!');
-    } catch (error) {
-      console.error('Error adding suggestion:', error);
-    }
-  };
-
-  const handleUpdateMoreSuggestionsStatus = async (status: string) => {
-    if (!customer) return;
-
-    try {
-      const moreSuggestionsRef = ref(database, `requestMoreSuggestions/${customer.displayName}`);
-      await update(moreSuggestionsRef, { status });
-      setMoreSuggestionsRequest(status);
-      alert('Status updated successfully!');
-    } catch (error) {
-      console.error('Error updating status:', error);
-    }
-  };
+    fetchSubscription();
+  }, [subscriptionId]);
 
   if (loading) {
-    return <p>Loading...</p>;
+    return (
+      <DefaultLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+            <p className="mt-2">Loading subscription details...</p>
+          </div>
+        </div>
+      </DefaultLayout>
+    );
   }
 
-  if (!customer) {
-    return <p>No customer details found.</p>;
+  if (error || !subscription) {
+    return (
+      <DefaultLayout>
+        <div className="bg-white mx-auto w-full max-w-[1200px] space-y-6 p-4">
+          <div className="flex items-center gap-4 mb-6">
+            <Button 
+              variant="outline" 
+              onClick={() => router.back()}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+          </div>
+          
+          <Card className="shadow-sm">
+            <CardContent className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                  {error || 'Subscription not found'}
+                </h2>
+                <p className="text-gray-600 mb-4">
+                  The subscription you're looking for doesn't exist or couldn't be loaded.
+                </p>
+                <Link href="/subscriptions">
+                  <Button>Return to Subscriptions</Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </DefaultLayout>
+    );
   }
 
   return (
     <DefaultLayout>
-      <div className="mx-auto w-full max-w-[1080px]">
-        <Breadcrumb pageName="Request Details" />
-        <div>
-          {/* Customer Details */}
-          <Card className="rounded-[10px] border border-stroke bg-white p-4 shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card sm:p-7.5">
-            <CardHeader>
-              <CardTitle>Customer Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p><strong>Name:</strong> {customer.displayName}</p>
-              <p><strong>Email:</strong> {customer.email}</p>
-              <p><strong>Mobile:</strong> {customer.mobile}</p>
-            </CardContent>
-          </Card>
-
-          {/* More Suggestions Status Update */}
-          <Card className="rounded-[10px] mt-5 border border-stroke bg-white p-4 shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card sm:p-7.5">
-            <CardHeader>
-              <CardTitle>Update More Suggestions Request Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-4">
-                <Button onClick={() => handleUpdateMoreSuggestionsStatus('in progress')}>
-                  Mark as In Progress
-                </Button>
-                <Button onClick={() => handleUpdateMoreSuggestionsStatus('done')}>
-                  Mark as Done
-                </Button>
-              </div>
-              <p className="mt-4"><strong>Current Status:</strong> {moreSuggestionsRequest || 'N/A'}</p>
-            </CardContent>
-          </Card>
-
-          {/* Add Suggestion */}
-          <Card className="rounded-[10px] mt-5 border border-stroke bg-white p-4 shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card sm:p-7.5">
-            <CardHeader>
-              <CardTitle>Add Suggestion</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col space-y-4">
-                <Input
-                  placeholder="Message"
-                  value={newSuggestion.message}
-                  onChange={(e) => setNewSuggestion({ ...newSuggestion, message: e.target.value })}
-                />
-                <Input
-                  placeholder="Slot (e.g., morning, afternoon)"
-                  value={newSuggestion.slot}
-                  onChange={(e) => setNewSuggestion({ ...newSuggestion, slot: e.target.value })}
-                />
-                <select
-                  className="border border-gray-300 rounded p-2"
-                  value={newSuggestion.trainer}
-                  onChange={(e) => setNewSuggestion({ ...newSuggestion, trainer: e.target.value })}
-                >
-                  <option value="">Select Trainer</option>
-                  {trainers.map((trainer) => (
-                    <option key={trainer.id} value={trainer.displayName}>
-                      {trainer.displayName}
-                    </option>
-                  ))}
-                </select>
-                <Button onClick={handleAddSuggestion}>Add Suggestion</Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Trainer Preferences */}
-          <Card className="rounded-[10px] mt-5 border border-stroke bg-white p-4 shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card sm:p-7.5">
-            <CardHeader>
-              <CardTitle>Trainer Preferences</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p><strong>First Choice:</strong> {customer.trainerPreferences.first}</p>
-              <p><strong>Second Choice:</strong> {customer.trainerPreferences.second}</p>
-              <p><strong>Third Choice:</strong> {customer.trainerPreferences.third}</p>
-            </CardContent>
-          </Card>
-
-          {/* Slot Preferences */}
-          <Card className="rounded-[10px] mt-5 border border-stroke bg-white p-4 shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card sm:p-7.5">
-            <CardHeader>
-              <CardTitle>Slot Preference</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p><strong>Preferred Slot:</strong> {customer.preferredSlot}</p>
-            </CardContent>
-          </Card>
-
-          {/* Suggestions */}
-          <Card className="rounded-[10px] mt-5 border border-stroke bg-white p-4 shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card sm:p-7.5">
-            <CardHeader>
-              <CardTitle>Suggestions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {suggestions.length > 0 ? (
-                suggestions.map((suggestion, index) => (
-                  <div key={index} className="mb-4">
-                    <p><strong>Message:</strong> {suggestion.message}</p>
-                    <p><strong>Slot:</strong> {suggestion.slot}</p>
-                    <p><strong>Trainer:</strong> {suggestion.trainer}</p>
-                  </div>
-                ))
-              ) : (
-                <p>No suggestions available.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Accepted Suggestion */}
-          <Card className="rounded-[10px] mt-5 border border-stroke bg-white p-4 shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card sm:p-7.5">
-            <CardHeader>
-              <CardTitle>Accepted Suggestion</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {acceptedSuggestion ? (
-                <div>
-                  <p><strong>Message:</strong> {acceptedSuggestion.message}</p>
-                  <p><strong>Slot:</strong> {acceptedSuggestion.slot}</p>
-                  <p><strong>Trainer:</strong> {acceptedSuggestion.trainer}</p>
-                  <p><strong>Suggestion ID:</strong> {acceptedSuggestion.suggestionId}</p>
-                </div>
-              ) : (
-                <p>No accepted suggestion found.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* More Suggestions Request */}
-          <Card className="rounded-[10px] mt-5 border border-stroke bg-white p-4 shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card sm:p-7.5">
-            <CardHeader>
-              <CardTitle>More Suggestions Request</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {moreSuggestionsRequest ? (
-                <p><strong>Status:</strong> {moreSuggestionsRequest}</p>
-              ) : (
-                <p>No more suggestions requests found.</p>
-              )}
-            </CardContent>
-          </Card>
+      <div className="bg-white mx-auto w-full max-w-[1200px] space-y-6 p-4">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => router.back()}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">{subscription.name}</h1>
+              <p className="text-gray-600">Subscription Details</p>
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <Link href={`/subscription/edit/${subscription.id}`}>
+              <Button variant="outline">Edit Subscription</Button>
+            </Link>
+            <Badge 
+              variant={subscription.active ? "default" : "secondary"}
+              className={`px-3 py-1 ${
+                subscription.active 
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                  : 'bg-red-100 text-red-800 hover:bg-red-200'
+              }`}
+            >
+              {subscription.active ? 'Active' : 'Inactive'}
+            </Badge>
+          </div>
         </div>
-      
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Basic Information */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Basic Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Name</label>
+                  <p className="text-lg font-semibold">{subscription.name}</p>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Description</label>
+                  <p className="text-gray-900">{subscription.description}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Type</label>
+                    <div className="mt-1">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        <Tag className="h-3 w-3 mr-1" />
+                        {subscription.type}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  {subscription.price && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Price</label>
+                      <p className="text-lg font-semibold text-green-600">
+                        ${subscription.price}
+                        {subscription.duration && <span className="text-sm text-gray-500">/{subscription.duration}</span>}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Features */}
+            {subscription.features && subscription.features.length > 0 && (
+              <Card className="shadow-sm">
+                <CardHeader>
+                  <CardTitle>Features</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {subscription.features.map((feature, index) => (
+                      <li key={index} className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Platform Availability */}
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Platform Availability</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Monitor className="h-4 w-4 text-gray-600" />
+                    <span>Onsite Access</span>
+                  </div>
+                  {subscription.validForOnsite ? (
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  )}
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4 text-gray-600" />
+                    <span>Mobile Access</span>
+                  </div>
+                  {subscription.validForMobile ? (
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Timeline */}
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Timeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Created</label>
+                  <p className="text-sm text-gray-900">
+                    {new Date(subscription.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                
+                {subscription.updatedAt && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Last Updated</label>
+                    <p className="text-sm text-gray-900">
+                      {new Date(subscription.updatedAt).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Link href={`/subscription/edit/${subscription.id}`} className="block">
+                  <Button variant="outline" className="w-full justify-start">
+                    Edit Subscription
+                  </Button>
+                </Link>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => {
+                    // Add duplicate functionality here
+                    console.log('Duplicate subscription:', subscription.id);
+                  }}
+                >
+                  Duplicate Subscription
+                </Button>
+                
+                <Link href="/subscriptions" className="block">
+                  <Button variant="outline" className="w-full justify-start">
+                    Back to All Subscriptions
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </DefaultLayout>
   );

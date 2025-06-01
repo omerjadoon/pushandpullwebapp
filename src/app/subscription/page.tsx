@@ -197,7 +197,14 @@ export default function SubscriptionsList() {
                         key={subscription.id} 
                         className="border-t hover:bg-gray-50 dark:hover:bg-gray-900"
                       >
-                        <td className="p-3 font-medium">{subscription.name}</td>
+                        <td className="p-3 font-medium">
+                          <Link 
+                            href={`/subscription/details/${subscription.id}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                          >
+                            {subscription.name}
+                          </Link>
+                        </td>
                         <td className="p-3 max-w-xs truncate">{subscription.description}</td>
                         <td className="p-3">
                           <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
@@ -226,12 +233,12 @@ export default function SubscriptionsList() {
                         </td>
                         <td className="p-3 text-right">
                           <div className="flex justify-end gap-2">
-                            {/* <Link href={`/subscriptions/edit/${subscription.id}`}>
+                            <Link href={`/subscription/edit/${subscription.id}`}>
                               <Button variant="outline" size="sm">Edit</Button>
                             </Link>
-                            <Link href={`/subscriptions/view/${subscription.id}`}>
+                            <Link href={`/subscription/details/${subscription.id}`}>
                               <Button variant="outline" size="sm">View</Button>
-                            </Link> */}
+                            </Link>
                           </div>
                         </td>
                       </tr>
