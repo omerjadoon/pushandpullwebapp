@@ -119,7 +119,7 @@ export default function SubscriptionsList() {
             <div className="flex flex-col md:flex-row gap-4 mb-6">
               <div className="flex-grow">
                 <Input
-                  placeholder="Search subscriptions..."
+                  placeholder="Search subscriptions...."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full"
