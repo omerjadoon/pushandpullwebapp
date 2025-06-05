@@ -444,7 +444,7 @@ export default function EditSubscription() {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="validForOnsite">Onsite Access</Label>
                     <Switch
-                      id="validForOnsite"
+                      
                       checked={formData.validForOnsite}
                       onCheckedChange={(checked) => handleInputChange('validForOnsite', checked)}
                     />
@@ -453,7 +453,7 @@ export default function EditSubscription() {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="validForMobile">Mobile Access</Label>
                     <Switch
-                      id="validForMobile"
+                     
                       checked={formData.validForMobile}
                       onCheckedChange={(checked) => handleInputChange('validForMobile', checked)}
                     />
@@ -462,7 +462,7 @@ export default function EditSubscription() {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="active">Active Status</Label>
                     <Switch
-                      id="active"
+                   
                       checked={formData.active}
                       onCheckedChange={(checked) => handleInputChange('active', checked)}
                     />
