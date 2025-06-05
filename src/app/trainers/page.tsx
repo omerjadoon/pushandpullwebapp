@@ -3,7 +3,7 @@ import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
 import { Metadata } from "next";
 import DefaultLayout from "@/components/Layouts/DefaultLaout";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { ref, onValue } from "firebase/database";
 import { database } from "../../app/firebaseFunctions/firebaseConfig";
 import TrainerForm  from "../../components/Trainers/TrainerForm";
@@ -19,8 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { FiEdit2, FiTrash2, FiSearch } from "react-icons/fi";
+import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import Link from "next/link";
 
 
@@ -42,7 +41,6 @@ const Trainers = () => {
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedTrainer, setSelectedTrainer] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const trainersRef = ref(database, "users");
@@ -58,16 +56,6 @@ const Trainers = () => {
     return () => unsubscribe();
   }, []);
 
-  const filteredTrainers = useMemo(() => {
-    if (!searchTerm) return trainers;
-    
-    return trainers.filter((trainer) =>
-      trainer.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trainer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trainer.specialization.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [trainers, searchTerm]);
-
   const handleDeleteTrainer = async (id : string) => {
     try {
       await deleteTrainer(id);
@@ -76,6 +64,8 @@ const Trainers = () => {
       console.error("Error deleting trainer:", error);
     }
   };
+
+
 
   const handleFormClose = () => {
     setShowForm(false);
@@ -90,6 +80,8 @@ const Trainers = () => {
       />
     );
   }
+
+  
 
   return (
     <DefaultLayout>
@@ -108,20 +100,6 @@ const Trainers = () => {
             Add Trainer
             </Button>
         </Link>
-      </div>
-
-      {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            type="text"
-            placeholder="Search trainers by name, email, or specialization..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary dark:border-dark-3 dark:bg-dark-2 dark:text-white"
-          />
-        </div>
       </div>
 
       <div className="max-w-full overflow-x-auto">
@@ -143,66 +121,58 @@ const Trainers = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTrainers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  {searchTerm ? "No trainers found matching your search." : "No trainers available."}
+            {trainers.map((trainer, index) => (
+              <TableRow key={trainer.id}>
+                <TableCell
+                  className={`border-[#eee] px-4 py-4 dark:border-dark-3 xl:pl-7.5 ${
+                    index === trainers.length - 1 ? "border-b-0" : "border-b"
+                  }`}
+                >
+                  <h5 className="text-dark dark:text-white">
+                    {trainer.displayName}
+                  </h5>
+                </TableCell>
+                <TableCell
+                  className={`border-[#eee] px-4 py-4 dark:border-dark-3 ${
+                    index === trainers.length - 1 ? "border-b-0" : "border-b"
+                  }`}
+                >
+                  <p className="text-dark dark:text-white">
+                    {trainer.email}
+                  </p>
+                </TableCell>
+                <TableCell
+                  className={`border-[#eee] px-4 py-4 dark:border-dark-3 ${
+                    index === trainers.length - 1 ? "border-b-0" : "border-b"
+                  }`}
+                >
+                  <p className="text-dark dark:text-white">
+                    {trainer.specialization}
+                  </p>
+                </TableCell>
+                <TableCell
+                  className={`border-[#eee] px-4 py-4 dark:border-dark-3 xl:pr-7.5 ${
+                    index === trainers.length - 1 ? "border-b-0" : "border-b"
+                  }`}
+                >
+                  <div className="flex items-center justify-end space-x-3.5">
+                  <Link href={`/trainers/edit/${trainer.id}`}>
+                    <button
+                      className="hover:text-primary"
+                    >
+                      <FiEdit2 className="h-5 w-5" />
+                    </button>
+                  </Link>
+                    <button
+                      className="hover:text-primary"
+                      onClick={() => handleDeleteTrainer(trainer.id)}
+                    >
+                      <FiTrash2 className="h-5 w-5" />
+                    </button>
+                  </div>
                 </TableCell>
               </TableRow>
-            ) : (
-              filteredTrainers.map((trainer, index) => (
-                <TableRow key={trainer.id}>
-                  <TableCell
-                    className={`border-[#eee] px-4 py-4 dark:border-dark-3 xl:pl-7.5 ${
-                      index === filteredTrainers.length - 1 ? "border-b-0" : "border-b"
-                    }`}
-                  >
-                    <h5 className="text-dark dark:text-white">
-                      {trainer.displayName}
-                    </h5>
-                  </TableCell>
-                  <TableCell
-                    className={`border-[#eee] px-4 py-4 dark:border-dark-3 ${
-                      index === filteredTrainers.length - 1 ? "border-b-0" : "border-b"
-                    }`}
-                  >
-                    <p className="text-dark dark:text-white">
-                      {trainer.email}
-                    </p>
-                  </TableCell>
-                  <TableCell
-                    className={`border-[#eee] px-4 py-4 dark:border-dark-3 ${
-                      index === filteredTrainers.length - 1 ? "border-b-0" : "border-b"
-                    }`}
-                  >
-                    <p className="text-dark dark:text-white">
-                      {trainer.specialization}
-                    </p>
-                  </TableCell>
-                  <TableCell
-                    className={`border-[#eee] px-4 py-4 dark:border-dark-3 xl:pr-7.5 ${
-                      index === filteredTrainers.length - 1 ? "border-b-0" : "border-b"
-                    }`}
-                  >
-                    <div className="flex items-center justify-end space-x-3.5">
-                    <Link href={`/trainers/edit/${trainer.id}`}>
-                      <button
-                        className="hover:text-primary"
-                      >
-                        <FiEdit2 className="h-5 w-5" />
-                      </button>
-                    </Link>
-                      <button
-                        className="hover:text-primary"
-                        onClick={() => handleDeleteTrainer(trainer.id)}
-                      >
-                        <FiTrash2 className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>

@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ref, get } from 'firebase/database';
 import { database } from '@/config/firebaseConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import DefaultLayout from "@/components/Layouts/DefaultLaout";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordian";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Calendar, User, Users, Weight, Ruler, Target, ClipboardList, Clock, CreditCard, Search, X } from 'lucide-react';
+import { Calendar, User, Users, Weight, Ruler, Target, ClipboardList, Clock, CreditCard } from 'lucide-react';
 
 interface Package {
   id: string;
@@ -63,7 +62,6 @@ export default function PackageList() {
   const [customers, setCustomers] = useState<Record<string, Customer>>({});
   const [subscriptions, setSubscriptions] = useState<Record<string, Subscription>>({});
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -163,52 +161,6 @@ export default function PackageList() {
     return remainingDays > 0 ? remainingDays : 0;
   };
 
-  // Filter packages based on search term
-  const filteredPackages = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return packages;
-    }
-
-    const searchLower = searchTerm.toLowerCase();
-    
-    return packages.filter((pkg) => {
-      const trainerInfo = getTrainerInfo(pkg.trainerId);
-      const customerInfo = getCustomerInfo(pkg.customerId);
-      const subscription = pkg.subscriptionId ? getSubscriptionInfo(pkg.subscriptionId) : null;
-      
-      // Search in package title
-      if (pkg.title?.toLowerCase().includes(searchLower)) return true;
-      
-      // Search in customer name
-      if (pkg.customerName?.toLowerCase().includes(searchLower)) return true;
-      if (customerInfo.displayName?.toLowerCase().includes(searchLower)) return true;
-      
-      // Search in customer goal
-      if (pkg.customerGoal?.toLowerCase().includes(searchLower)) return true;
-      
-      // Search in trainer information
-      if (trainerInfo.displayName?.toLowerCase().includes(searchLower)) return true;
-      if (trainerInfo.specialization?.toLowerCase().includes(searchLower)) return true;
-      
-      // Search in subscription information
-      if (subscription?.name?.toLowerCase().includes(searchLower)) return true;
-      if (subscription?.type?.toLowerCase().includes(searchLower)) return true;
-      
-      // Search in plan titles and descriptions
-      if (pkg.plans && Array.isArray(pkg.plans) && pkg.plans.some(plan => 
-        plan.title?.toLowerCase().includes(searchLower) ||
-        plan.description?.toLowerCase().includes(searchLower) ||
-        plan.type?.toLowerCase().includes(searchLower)
-      )) return true;
-      
-      return false;
-    });
-  }, [packages, searchTerm, trainers, customers, subscriptions]);
-
-  const clearSearch = () => {
-    setSearchTerm('');
-  };
-
   if (loading) {
     return (
       <DefaultLayout>
@@ -224,48 +176,11 @@ export default function PackageList() {
       <div className="mx-auto w-full max-w-[1080px] space-y-6 p-4">
         <Card className="rounded-[10px] border border-stroke bg-white shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card">
           <CardHeader>
-            <div className="flex flex-col space-y-4">
-              <CardTitle className="text-2xl">Package List</CardTitle>
-              
-              {/* Search Input */}
-              <div className="relative max-w-md p-5">
-                <Search className="absolute  top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search packages, customers, trainers..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 pr-10"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={clearSearch}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              
-              {/* Search Results Info */}
-              {searchTerm && (
-                <div className="text-sm text-gray-600">
-                  {filteredPackages.length === 0 ? (
-                    <span>No packages found for "{searchTerm}"</span>
-                  ) : (
-                    <span>
-                      Found {filteredPackages.length} package{filteredPackages.length !== 1 ? 's' : ''} 
-                      {filteredPackages.length !== packages.length && ` out of ${packages.length}`}
-                      {searchTerm && ` matching "${searchTerm}"`}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+            <CardTitle className="text-2xl">Package List</CardTitle>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="space-y-4">
-              {filteredPackages.map((pkg) => {
+              {packages.map((pkg) => {
                 const customerData = getCustomerInfo(pkg.customerId);
                 const isFreeTrial = pkg.isFreeTrial || customerData.freetrial === "yes";
                 const remainingDays = isFreeTrial ? getRemainingFreeTrialDays(customerData.freetrialDate || '') : 0;
@@ -280,10 +195,7 @@ export default function PackageList() {
                     <AccordionTrigger className="hover:no-underline">
                       <div className="flex justify-between w-full items-center">
                         <div className="flex items-center gap-4">
-                          <div className="text-left">
-                            <h3 className="text-lg font-semibold">{pkg.title}</h3>
-                            <p className="text-sm text-gray-600">Customer: {pkg.customerName}</p>
-                          </div>
+                          <h3 className="text-lg font-semibold">{pkg.title}</h3>
                           <Badge variant="outline" className="ml-2">
                             {pkg.plans?.length || 0} Plans
                           </Badge>
@@ -426,23 +338,9 @@ export default function PackageList() {
               })}
             </Accordion>
 
-            {filteredPackages.length === 0 && !searchTerm && (
+            {packages.length === 0 && (
               <div className="text-center py-8">
                 <p className="text-gray-500">No packages found</p>
-              </div>
-            )}
-
-            {filteredPackages.length === 0 && searchTerm && (
-              <div className="text-center py-8">
-                <p className="text-gray-500">
-                  No packages found matching "{searchTerm}"
-                </p>
-                <button
-                  onClick={clearSearch}
-                  className="mt-2 text-blue-600 hover:text-blue-800 text-sm underline"
-                >
-                  Clear search to show all packages
-                </button>
               </div>
             )}
           </CardContent>
