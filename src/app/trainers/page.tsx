@@ -8,7 +8,6 @@ import { ref, onValue } from "firebase/database";
 import { database } from "../../app/firebaseFunctions/firebaseConfig";
 import TrainerForm  from "../../components/Trainers/TrainerForm";
 
-
 import { deleteTrainer } from "../../app/firebaseFunctions/trainerFunctions";
 import {
   Table,
@@ -19,9 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiCalendar } from "react-icons/fi";
 import Link from "next/link";
-
 
 interface Trainer {
   id: string;
@@ -65,8 +63,6 @@ const Trainers = () => {
     }
   };
 
-
-
   const handleFormClose = () => {
     setShowForm(false);
     setSelectedTrainer(null);
@@ -80,8 +76,6 @@ const Trainers = () => {
       />
     );
   }
-
-  
 
   return (
     <DefaultLayout>
@@ -156,16 +150,26 @@ const Trainers = () => {
                   }`}
                 >
                   <div className="flex items-center justify-end space-x-3.5">
-                  <Link href={`/trainers/edit/${trainer.id}`}>
-                    <button
-                      className="hover:text-primary"
-                    >
-                      <FiEdit2 className="h-5 w-5" />
-                    </button>
-                  </Link>
+                    <Link href={`/trainers/calendar/${trainer.id}`}>
+                      <button
+                        className="hover:text-primary"
+                        title="View Calendar"
+                      >
+                        <FiCalendar className="h-5 w-5" />
+                      </button>
+                    </Link>
+                    <Link href={`/trainers/edit/${trainer.id}`}>
+                      <button
+                        className="hover:text-primary"
+                        title="Edit Trainer"
+                      >
+                        <FiEdit2 className="h-5 w-5" />
+                      </button>
+                    </Link>
                     <button
                       className="hover:text-primary"
                       onClick={() => handleDeleteTrainer(trainer.id)}
+                      title="Delete Trainer"
                     >
                       <FiTrash2 className="h-5 w-5" />
                     </button>

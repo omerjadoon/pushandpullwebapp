@@ -25,7 +25,7 @@ const DropdownNotification = () => {
           return {
             image: "/images/notification.webp",
             title: (request as any).title,
-            subTitle: userData.displayName,
+            subTitle: ".",
           };
         })
       );
