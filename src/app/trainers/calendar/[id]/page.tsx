@@ -142,39 +142,39 @@ const TrainerCalendar = () => {
       }
     });
 
-    // Load accepted suggestions
-    const suggestionsRef = ref(database, 'acceptedSuggestions');
-    const unsubscribeSuggestions = onValue(suggestionsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const allSuggestions: AcceptedSuggestion[] = [];
-        
-        // Navigate through acceptedSuggestions/{customerId} - direct structure
-        Object.entries(data).forEach(([customerId, suggestion]: [string, any]) => {
-          if (suggestion && typeof suggestion === 'object') {
-            allSuggestions.push({
-              id: suggestion.id || suggestion.suggestionId,
-              customerId,
-              suggestionId: suggestion.suggestionId,
-              message: suggestion.message,
-              slot: suggestion.slot,
-              trainer: suggestion.trainer
-            });
-          }
-        });
-        
-        console.log("All Suggestions Found:", allSuggestions);
-        setAcceptedSuggestions(allSuggestions);
-      }
-      setLoading(false);
-    });
+      // Load accepted suggestions from user preferredSlots
+  const usersRef = ref(database, 'users');
+  const unsubscribeSlots = onValue(usersRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      const allPreferredSlots: AcceptedSuggestion[] = [];
+
+      Object.entries(data).forEach(([userId, user]: [string, any]) => {
+        if (user?.role === 'customer' && user.preferredSlot) {
+          allPreferredSlots.push({
+            id: userId,
+            suggestionId: `preferredSlot-${userId}`,
+            customerId: userId,
+            slot: user.preferredSlot,
+            message: "Preferred slot from user profile",
+            trainer: user.trainerId || ''
+          });
+        }
+      });
+
+      setAcceptedSuggestions(allPreferredSlots);
+    }
+
+    setLoading(false);
+  });
 
     return () => {
       unsubscribeTrainer();
       unsubscribeCustomers();
       unsubscribePackages();
       unsubscribeSubscriptions();
-      unsubscribeSuggestions();
+      unsubscribeSlots(); // cleanup
+      
     };
   }, [trainerId]);
 
@@ -551,25 +551,17 @@ const TrainerCalendar = () => {
                     {selectedDay.suggestions.map((suggestion, index) => (
                       <div key={index} className="border rounded-lg p-4 space-y-2">
                         <div className="flex items-center justify-between">
+                          
                           <div className="flex items-center gap-2">
-                            <FiMessageSquare className="h-4 w-4 text-gray-500" />
-                            <span className="font-medium">Suggestion #{suggestion.suggestionId}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
+                          Training Slot :
                             <div className={`w-3 h-3 rounded-full ${getSlotColor(suggestion.slot)}`}></div>
-                            <span className="text-sm capitalize font-medium">{suggestion.slot}</span>
+                             <span className="text-sm capitalize font-medium">{suggestion.slot}</span>
                           </div>
                         </div>
                         
-                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                          <p className="text-sm">{suggestion.message}</p>
-                        </div>
+                        
 
-                        {customers[suggestion.customerId] && (
-                          <div className="text-sm text-gray-600">
-                            Customer: {customers[suggestion.customerId].displayName}
-                          </div>
-                        )}
+                       
                       </div>
                     ))}
                   </div>
